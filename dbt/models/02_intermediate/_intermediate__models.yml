@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: example_entity
+    description: "Canonical example entity (replace with your domain entities)."
+    columns:
+      - name: entity_code
+        data_tests: [unique, not_null]
+      - name: raw_hash
+        description: "Snowflake HASH of business columns — change detection."
+        data_tests: [not_null]

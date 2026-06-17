@@ -1,0 +1,23 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  REAL SOURCES — guidance (this whole file is commented out). Recreate it as
+#  _staging__sources.yml and add the Jinja braces shown in [brackets] below.
+#
+#  The source database must follow the environment, so template it from the target:
+#
+#  version: 2
+#  sources:
+#    - name: sap
+#      # database: [ (target.name ~ '_' ~ var('domain_database_base')) | upper ]  -> <ENV>_<DOMAIN>
+#      database: "DEV_QUALITY_MANAGEMENT"
+#      schema: RAW
+#      loaded_at_field: "TRY_TO_TIMESTAMP_NTZ(GLCHANGETIME, 'YYYYMMDDHH24MISS.FF9')"
+#      freshness:
+#        warn_after: {count: 12, period: hour}
+#        error_after: {count: 24, period: hour}
+#      tables:
+#        - name: your_table
+#          identifier: raw_your_table
+#
+#  Then in a staging model call (without leading dashes):
+#      generate_staging('sap', 'your_table', business_key='your_key')
+# ════════════════════════════════════════════════════════════════════════════

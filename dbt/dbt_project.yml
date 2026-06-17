@@ -1,0 +1,65 @@
+name: "quality_management"
+version: "1.0.0"
+config-version: 2
+profile: "quality_management"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+
+clean-targets: ["target", "dbt_packages"]
+
+# Packages install path. Local Windows/OneDrive runs set DBT_PACKAGES_PATH to a folder
+# outside OneDrive (run-dbt.ps1); CI/Linux leaves it unset and uses the default dbt_packages.
+packages-install-path: "{{ env_var('DBT_PACKAGES_PATH', 'dbt_packages') }}"
+
+require-dbt-version: [">=1.7.0", "<2.0.0"]
+
+query-comment:
+  comment: "quality_management | {{ node.unique_id if node else 'macro' }}"
+  append: true
+
+# generate_database_name builds <TARGET>_<domain_database_base>, so dev/uat/prod route
+# to DEV_<DOMAIN> / UAT_<DOMAIN> / PROD_<DOMAIN> automatically from --target.
+vars:
+  domain_database_base: "QUALITY_MANAGEMENT"
+
+seeds:
+  quality_management:
+    +schema: RAW
+    +quote_columns: false
+
+snapshots:
+  quality_management:
+    +schema: SNAPSHOTS
+
+models:
+  quality_management:
+    +persist_docs:
+      relation: true
+      columns: true
+
+    01_staging:
+      +materialized: view
+      +schema: STG
+      +tags: ["quality_management", "staging"]
+      +group: ingestion
+
+    02_intermediate:
+      +materialized: table
+      +schema: DSO
+      +tags: ["quality_management"]
+      +group: quality_management
+
+    03_mart:
+      +materialized: table
+      +schema: DPA
+      +tags: ["quality_management"]
+      +group: quality_management
+      # Change Tracking (Power BI incremental refresh) + RBAC GRANT to the env consumer role.
+      +post-hook:
+        - "ALTER TABLE {{ this }} SET CHANGE_TRACKING = TRUE"
+        - "{{ grant_select_to_consumer() }}"

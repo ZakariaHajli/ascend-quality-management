@@ -1,0 +1,38 @@
+# Run dbt with --profiles-dir . (run-dbt.ps1 does this). Secrets come from ASCEND_SF_*
+# env vars (.env.ps1). Per-target role/warehouse/database select the dev/uat/prod environment.
+quality_management:
+  target: dev
+  outputs:
+
+    dev:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_DEV"
+      warehouse: "WH_QUALITY_MANAGEMENT_DEV"
+      database: "DEV_QUALITY_MANAGEMENT"
+      schema: "PUBLIC"
+      threads: 4
+
+    uat:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_UAT"
+      warehouse: "WH_QUALITY_MANAGEMENT_UAT"
+      database: "UAT_QUALITY_MANAGEMENT"
+      schema: "PUBLIC"
+      threads: 4
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_PROD"
+      warehouse: "WH_QUALITY_MANAGEMENT_PROD"
+      database: "PROD_QUALITY_MANAGEMENT"
+      schema: "PUBLIC"
+      threads: 4

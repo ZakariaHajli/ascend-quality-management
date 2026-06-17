@@ -1,0 +1,2 @@
+# dbt runtime for CI (Linux runners). Pinned to the version the platform was built on.
+dbt-snowflake~=1.11

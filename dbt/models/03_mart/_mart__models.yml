@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: dim_example_entity
+    description: "Example contracted product (enforced contract + RBAC + change tracking)."
+    columns:
+      - name: example_entity_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - name: entity_code
+        data_type: varchar(16777216)
+        data_tests: [not_null, unique]
+      - name: entity_label
+        data_type: varchar(16777216)
+      - name: entity_value
+        data_type: number(38,0)

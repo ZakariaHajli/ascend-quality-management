@@ -1,0 +1,14 @@
+version: 2
+
+# Data Mesh Principle 1 — domain ownership. private models can only be ref'd within the
+# same group; public models are the domain's declared interface.
+groups:
+  - name: ingestion
+    owner:
+      name: Platform / Ingestion Team
+      email: quality-mgmt@ascend.example
+
+  - name: quality_management
+    owner:
+      name: Quality Management Domain
+      email: quality-mgmt@ascend.example

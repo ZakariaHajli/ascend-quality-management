@@ -1,0 +1,80 @@
+name: dbt CI/CD - quality_management
+
+# dev  : on every pull request to main   -> dbt build --target dev
+# uat  : on merge/push to main           -> dbt build --target uat
+# prod : on a published GitHub release   -> dbt build --target prod
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+defaults:
+  run:
+    working-directory: dbt
+
+jobs:
+  dev:
+    name: build (dev)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev
+    concurrency:
+      group: quality_management-dev
+      cancel-in-progress: true
+    env:
+      ASCEND_SF_ACCOUNT: ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER: ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - run: dbt build --target dev --profiles-dir .
+
+  uat:
+    name: build (uat)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: uat
+    concurrency:
+      group: quality_management-uat
+      cancel-in-progress: false
+    env:
+      ASCEND_SF_ACCOUNT: ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER: ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - run: dbt build --target uat --profiles-dir .
+
+  prod:
+    name: build (prod)
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: prod   # add required-reviewer protection on this GitHub Environment for manual approval
+    concurrency:
+      group: quality_management-prod
+      cancel-in-progress: false
+    env:
+      ASCEND_SF_ACCOUNT: ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER: ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - run: dbt build --target prod --profiles-dir .

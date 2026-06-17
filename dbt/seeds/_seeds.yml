@@ -1,0 +1,11 @@
+version: 2
+
+seeds:
+  - name: example_source
+    description: "Example source data — replace with your domain's real sources/seeds."
+    config:
+      column_types:
+        entity_code: varchar
+        entity_label: varchar
+        entity_value: number
+        glchangetime: varchar

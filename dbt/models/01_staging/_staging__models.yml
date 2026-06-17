@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_example__source
+    description: "Staged example source — deduplicated to latest glchangetime per entity_code."
+    columns:
+      - name: entity_code
+        description: "Business key."
+        data_tests: [unique, not_null]

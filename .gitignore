@@ -1,0 +1,18 @@
+# Secrets
+.env.ps1
+
+# Python venv
+.venv/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.*
+
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+package-lock.yml
