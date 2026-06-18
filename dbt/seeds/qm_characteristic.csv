@@ -1,0 +1,4 @@
+merknr,kurztext,sollwert,toleranzun,toleranzob,unit,glchangetime
+C10,Longueur,300,298,302,mm,20240101080000.000000000
+C20,Densite couture,8,7,9,pts_cm,20240101080000.000000000
+C30,Ecart couleur dE,0,0,2,dE,20240101080000.000000000

@@ -1,17 +1,187 @@
 version: 2
 
 models:
-  - name: dim_example_entity
-    description: "Example contracted product (enforced contract + RBAC + change tracking)."
+  # ── Contracted products ────────────────────────────────────────────────────
+  - name: dim_inspection_lot
+    description: "Inspection lot dimension; owns the domain perimeter (Pattern 4). Enforced contract."
     columns:
-      - name: example_entity_sid
+      - name: inspection_lot_sid
         data_type: number(38,0)
         constraints: [{type: not_null}]
         data_tests: [unique]
-      - name: entity_code
+      - name: inspection_lot_number
         data_type: varchar(16777216)
-        data_tests: [not_null, unique]
-      - name: entity_label
+        data_tests: [unique, not_null]
+      - name: material_number
         data_type: varchar(16777216)
-      - name: entity_value
+      - name: plant
+        data_type: varchar(16777216)
+      - name: production_order_number
+        data_type: varchar(16777216)
+      - name: inspection_type
+        data_type: varchar(16777216)
+      - name: lot_quantity
         data_type: number(38,0)
+      - name: lot_creation_date
+        data_type: date
+      - name: usage_decision_code
+        data_type: varchar(16777216)
+      - name: usage_decision_date
+        data_type: date
+      - name: lot_status
+        data_type: varchar(16777216)
+      - name: is_accepted
+        data_type: boolean
+      - name: is_rejected
+        data_type: boolean
+      - name: is_decision_made
+        data_type: boolean
+
+  - name: fct_inspection_result
+    description: "Characteristic-result fact (lot x characteristic). Enforced contract."
+    columns:
+      - name: inspection_lot_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_inspection_lot'), field: inspection_lot_sid}}
+      - name: characteristic_sid
+        data_type: number(38,0)
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_characteristic'), field: characteristic_sid}}
+      - name: inspection_lot_number
+        data_type: varchar(16777216)
+      - name: characteristic_code
+        data_type: varchar(16777216)
+      - name: measured_value
+        data_type: float
+      - name: target_value
+        data_type: float
+      - name: lower_spec_limit
+        data_type: float
+      - name: upper_spec_limit
+        data_type: float
+      - name: deviation_from_target
+        data_type: float
+      - name: is_in_spec
+        data_type: boolean
+        data_tests: [not_null]
+
+  - name: fct_inspection_lot_lifecycle
+    description: "Accumulating-snapshot fact: lot milestones + lag/age + defect rollup. Enforced contract."
+    columns:
+      - name: inspection_lot_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - name: production_order_sid
+        data_type: number(38,0)
+      - name: inspection_lot_number
+        data_type: varchar(16777216)
+      - name: material_number
+        data_type: varchar(16777216)
+      - name: lot_status
+        data_type: varchar(16777216)
+      - name: created_date
+        data_type: date
+      - name: decision_date
+        data_type: date
+      - name: days_to_decision
+        data_type: number(38,0)
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
+      - name: lot_age_days
+        data_type: number(38,0)
+      - name: is_accepted
+        data_type: boolean
+      - name: is_rejected
+        data_type: boolean
+      - name: total_defect_quantity
+        data_type: number(38,0)
+      - name: defect_line_count
+        data_type: number(38,0)
+
+  - name: agg_quality_kpi
+    description: "Canonical quality KPIs per material (semantic layer realised). Enforced contract."
+    columns:
+      - name: material_number
+        data_type: varchar(16777216)
+        data_tests: [unique, not_null]
+      - name: lots_total
+        data_type: number(38,0)
+      - name: lots_decided
+        data_type: number(38,0)
+      - name: lots_accepted
+        data_type: number(38,0)
+      - name: lots_rejected
+        data_type: number(38,0)
+      - name: first_pass_yield
+        data_type: float
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 1}
+      - name: reject_rate
+        data_type: float
+      - name: inspected_quantity
+        data_type: number(38,0)
+      - name: defect_quantity
+        data_type: number(38,0)
+      - name: defect_ppm
+        data_type: float
+      - name: results_total
+        data_type: number(38,0)
+      - name: in_spec_results
+        data_type: number(38,0)
+      - name: in_spec_rate
+        data_type: float
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 1}
+
+  # ── Other products (documented + tested) ───────────────────────────────────
+  - name: dim_characteristic
+    columns:
+      - name: characteristic_sid
+        data_tests: [unique, not_null]
+  - name: dim_defect_code
+    columns:
+      - name: defect_code_sid
+        data_tests: [unique, not_null]
+  - name: dim_production_order
+    description: "Conformed dimension of the consumed production-order product (cross-domain)."
+    columns:
+      - name: production_order_sid
+        data_tests: [unique, not_null]
+  - name: dim_calendar
+    columns:
+      - name: date_day
+        data_tests: [unique, not_null]
+  - name: fct_quality_defect
+    description: "Defect-grain fact for Pareto analysis."
+    columns:
+      - name: inspection_lot_sid
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_inspection_lot'), field: inspection_lot_sid}}
+
+unit_tests:
+  - name: perimeter_excludes_out_of_scope_defects
+    description: "Defects on lots outside the dimension perimeter must be dropped by the inner join."
+    model: fct_quality_defect
+    given:
+      - input: ref('defect')
+        rows:
+          - {notification_number: "N1", defect_item_number: 1, inspection_lot_number: "INPERIM",  production_order_number: "PO1", notification_date: "2026-01-01", defect_code: "D1", code_group: "VIS", defect_description: "scratch", defect_quantity: 5}
+          - {notification_number: "N2", defect_item_number: 1, inspection_lot_number: "OUTPERIM", production_order_number: "PO1", notification_date: "2026-01-02", defect_code: "D1", code_group: "VIS", defect_description: "scratch", defect_quantity: 9}
+      - input: ref('dim_inspection_lot')
+        rows:
+          - {inspection_lot_sid: 100, inspection_lot_number: "INPERIM"}
+      - input: ref('dim_defect_code')
+        rows:
+          - {defect_code_sid: 200, defect_code: "D1", code_group: "VIS"}
+      - input: ref('dim_production_order')
+        rows:
+          - {production_order_sid: 300, production_order_number: "PO1"}
+    expect:
+      rows:
+        - {inspection_lot_sid: 100, defect_code_sid: 200, production_order_sid: 300, notification_number: "N1", defect_item_number: 1, defect_code: "D1", code_group: "VIS", defect_description: "scratch", defect_quantity: 5, notification_date: "2026-01-01"}

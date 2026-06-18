@@ -12,3 +12,13 @@ groups:
     owner:
       name: Quality Management Domain
       email: quality-mgmt@ascend.example
+
+  - name: referential_data
+    owner:
+      name: Referential Data Domain
+      email: referential@ascend.example
+
+  - name: production_management
+    owner:
+      name: Production Management Domain (consumed)
+      email: production-mgmt@ascend.example

@@ -1,9 +1,40 @@
 version: 2
 
 models:
-  - name: stg_example__source
-    description: "Staged example source — deduplicated to latest glchangetime per entity_code."
+  - name: stg_qm__inspection_lot
+    description: "Staged inspection lots (QALS)."
     columns:
-      - name: entity_code
-        description: "Business key."
+      - name: prueflos
+        description: "Inspection lot number (business key)."
+        data_tests: [unique, not_null]
+      - name: art
+        description: "Inspection type (01 GR, 03 in-process, 04 final)."
+        data_tests:
+          - accepted_values: {arguments: {values: ["01", "03", "04"]}}
+
+  - name: stg_qm__usage_decision
+    description: "Staged usage decisions (QAVE)."
+    columns:
+      - name: prueflos
+        data_tests: [unique, not_null]
+      - name: vcode
+        data_tests:
+          - accepted_values: {arguments: {values: ["A", "R"]}}
+
+  - name: stg_qm__inspection_result
+    description: "Staged characteristic results (QAMR)."
+    columns:
+      - name: prueflos
+        data_tests: [not_null]
+
+  - name: stg_qm__defect_code
+    description: "Staged defect code catalog (QPCT)."
+    columns:
+      - name: code
+        data_tests: [not_null]
+
+  - name: stg_production__order
+    description: "Consumed production-order product (cross-domain interface)."
+    columns:
+      - name: production_order_number
         data_tests: [unique, not_null]

@@ -1,11 +1,45 @@
 version: 2
 
 seeds:
-  - name: example_source
-    description: "Example source data — replace with your domain's real sources/seeds."
+  - name: sap_qals
+    description: "SAP QALS — inspection lot header."
     config:
-      column_types:
-        entity_code: varchar
-        entity_label: varchar
-        entity_value: number
-        glchangetime: varchar
+      column_types: {prueflos: varchar, matnr: varchar, werks: varchar, losmenge: number, art: varchar, entstehdat: varchar, aufnr: varchar, glchangetime: varchar}
+
+  - name: sap_qave
+    description: "SAP QAVE — usage decision (accept/reject) per lot."
+    config:
+      column_types: {prueflos: varchar, vcode: varchar, vmenge: number, vdatum: varchar, glchangetime: varchar}
+
+  - name: sap_qamr
+    description: "SAP QAMR — inspection characteristic results."
+    config:
+      column_types: {prueflos: varchar, merknr: varchar, mittelwert: float, sollwert: float, toleranzun: float, toleranzob: float, glchangetime: varchar}
+
+  - name: sap_qmel
+    description: "SAP QMEL — quality notification header."
+    config:
+      column_types: {qmnum: varchar, prueflos: varchar, aufnr: varchar, qmart: varchar, erdat: varchar, glchangetime: varchar}
+
+  - name: sap_qmfe
+    description: "SAP QMFE — quality notification defect items."
+    config:
+      column_types: {qmnum: varchar, fenum: number, fecod: varchar, fegrp: varchar, anzfehler: number, glchangetime: varchar}
+
+  - name: sap_qpct
+    description: "SAP QPCT — defect code catalog (code group + code)."
+    config:
+      column_types: {codegruppe: varchar, code: varchar, kurztext: varchar, glchangetime: varchar}
+
+  - name: qm_characteristic
+    description: "Inspection characteristic master."
+    config:
+      column_types: {merknr: varchar, kurztext: varchar, sollwert: float, toleranzun: float, toleranzob: float, unit: varchar, glchangetime: varchar}
+
+  - name: production_order_product
+    description: >
+      The production-order data product CONSUMED from the production_management domain
+      (Data Mesh cross-domain consumption). Seeded here for a runnable prototype; in production
+      this is read via a declared cross-domain source (see _staging__sources.example.yml).
+    config:
+      column_types: {production_order_number: varchar, material_number: varchar, product_family: varchar, plant: varchar, creation_date: date, order_quantity: number}

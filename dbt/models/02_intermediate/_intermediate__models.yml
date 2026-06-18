@@ -1,11 +1,35 @@
 version: 2
 
 models:
-  - name: example_entity
-    description: "Canonical example entity (replace with your domain entities)."
+  - name: inspection_lot
+    description: "Canonical inspection lot with lifecycle status (Pattern 1 incremental merge)."
     columns:
-      - name: entity_code
+      - name: inspection_lot_number
         data_tests: [unique, not_null]
+      - name: lot_status
+        data_tests:
+          - accepted_values: {arguments: {values: ["IN_INSPECTION", "ACCEPTED", "REJECTED"]}}
       - name: raw_hash
-        description: "Snowflake HASH of business columns — change detection."
         data_tests: [not_null]
+
+  - name: inspection_result
+    description: "Characteristic results, one row per (lot, characteristic), with in-spec flag."
+    columns:
+      - name: is_in_spec
+        data_tests: [not_null]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [inspection_lot_number, characteristic_code]
+
+  - name: defect
+    description: "Defect items enriched with notification header and defect code catalog."
+    columns:
+      - name: defect_quantity
+        data_tests: [not_null]
+
+  - name: characteristic
+    description: "Inspection characteristic master."
+    columns:
+      - name: characteristic_code
+        data_tests: [unique, not_null]

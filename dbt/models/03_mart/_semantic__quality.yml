@@ -1,0 +1,66 @@
+version: 2
+
+# Time spine required by MetricFlow for time-based metrics.
+models:
+  - name: metricflow_time_spine
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day
+
+# Formal semantic layer (dbt MetricFlow). Canonical metric definitions live here, decoupled
+# from any single mart's SQL — the thesis's prescription for preventing metric drift.
+semantic_models:
+  - name: inspection_lots
+    description: "Semantic model over the inspection-lot lifecycle fact."
+    model: ref('fct_inspection_lot_lifecycle')
+    defaults:
+      agg_time_dimension: created_date
+    entities:
+      - name: inspection_lot
+        type: primary
+        expr: inspection_lot_sid
+    dimensions:
+      - name: created_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: lot_status
+        type: categorical
+      - name: material_number
+        type: categorical
+    measures:
+      - name: accepted_lots
+        agg: sum
+        expr: "case when is_accepted then 1 else 0 end"
+      - name: decided_lots
+        agg: sum
+        expr: "case when is_accepted or is_rejected then 1 else 0 end"
+      - name: defect_quantity_total
+        agg: sum
+        expr: total_defect_quantity
+
+metrics:
+  - name: accepted_lots
+    label: "Accepted Lots"
+    type: simple
+    type_params:
+      measure: accepted_lots
+  - name: decided_lots
+    label: "Decided Lots"
+    type: simple
+    type_params:
+      measure: decided_lots
+  - name: first_pass_yield
+    label: "First Pass Yield"
+    description: "Accepted lots / decided lots."
+    type: ratio
+    type_params:
+      numerator: accepted_lots
+      denominator: decided_lots
+  - name: total_defect_quantity
+    label: "Total Defect Quantity"
+    type: simple
+    type_params:
+      measure: defect_quantity_total
