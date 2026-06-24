@@ -22,7 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read        # list deploy runs + download the defer-state artifact (Slim CI)
+      actions: read         # list deploy runs + download the defer-state artifact (Slim CI)
+      pull-requests: write  # post the Slim CI summary comment on the PR
     environment: ${{ inputs.environment }}
     concurrency:
       group: dbt-${{ inputs.target }}
@@ -104,3 +105,11 @@ jobs:
           name: dbt-prod-state
           path: dbt/target/manifest.json
           retention-days: 30
+
+      - name: Comment Slim CI summary on PR
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python ../ci/pr_comment.py target/run_results.json "${{ inputs.target }}" > pr-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file pr-comment.md --edit-last --create-if-none

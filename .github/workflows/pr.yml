@@ -11,6 +11,7 @@ concurrency:
 permissions:
   contents: read
   actions: read          # required for Slim CI to read the prod deploy run / defer-state artifact
+  pull-requests: write   # post the Slim CI summary comment
 
 jobs:
   # ── Static gates: no Snowflake connection (dummy creds; parse never connects) ──

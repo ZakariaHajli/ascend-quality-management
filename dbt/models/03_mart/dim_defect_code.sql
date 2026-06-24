@@ -28,5 +28,6 @@ select
         when 'DIM' then 2
         when 'VIS' then 3
         else 9
-    end                         as code_group_priority
+    end                         as code_group_priority,
+    iff(codegruppe = 'VIS', true, false) as is_visual_defect
 from codes
