@@ -1,0 +1,99 @@
+name: _dbt-build (reusable)
+
+# Reusable build used by pr.yml and deploy.yml. Keeps the build steps DRY and consistent
+# across dev / uat / prod (one place to change).
+on:
+  workflow_call:
+    inputs:
+      target:        { required: true,  type: string }   # dev | uat | prod
+      environment:   { required: true,  type: string }   # GitHub Environment (secrets + protection)
+      select:        { required: false, type: string,  default: "" }      # e.g. "state:modified+"
+      defer:         { required: false, type: boolean, default: false }   # defer unselected to prod state
+      full_refresh:  { required: false, type: boolean, default: false }
+      freshness:     { required: false, type: boolean, default: false }   # run source freshness first
+      upload_state:  { required: false, type: boolean, default: false }   # publish manifest as defer state
+    secrets:
+      ASCEND_SF_ACCOUNT:  { required: true }
+      ASCEND_SF_USER:     { required: true }
+      ASCEND_SF_PASSWORD: { required: true }
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: dbt-${{ inputs.target }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      ASCEND_SF_ACCOUNT:  ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER:     ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dbt
+        run: pip install -r ../requirements.txt
+
+      - name: Cache dbt packages
+        uses: actions/cache@v4
+        with:
+          path: dbt/dbt_packages
+          key: dbt-packages-${{ hashFiles('dbt/packages.yml') }}
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: Download prod state (for defer / Slim CI)
+        if: ${{ inputs.defer }}
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: deploy.yml
+          name: dbt-prod-state
+          branch: main
+          path: dbt/prod-state
+          if_no_artifact_found: warn
+
+      - name: Source freshness
+        if: ${{ inputs.freshness }}
+        continue-on-error: true
+        run: dbt source freshness --target ${{ inputs.target }} --profiles-dir .
+
+      - name: dbt build
+        run: |
+          set -e
+          ARGS="--target ${{ inputs.target }} --profiles-dir ."
+          if [ -n "${{ inputs.select }}" ] && [ -f prod-state/manifest.json ]; then
+            echo "Slim build: ${{ inputs.select }} (deferring to prod state)"
+            ARGS="$ARGS --select ${{ inputs.select }} --defer --state prod-state"
+          else
+            echo "Full build (no state / no selection)"
+          fi
+          if [ "${{ inputs.full_refresh }}" = "true" ]; then ARGS="$ARGS --full-refresh"; fi
+          echo "dbt build $ARGS"
+          dbt build $ARGS
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-artifacts-${{ inputs.target }}-${{ github.run_id }}
+          path: dbt/target/*.json
+          retention-days: 7
+
+      - name: Publish prod state (defer baseline)
+        if: ${{ inputs.upload_state && success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-prod-state
+          path: dbt/target/manifest.json
+          retention-days: 30

@@ -1,0 +1,47 @@
+name: PR — lint & Slim CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Static gates: no Snowflake connection (dummy creds; parse never connects) ──
+  lint:
+    name: lint & governance
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      ASCEND_SF_ACCOUNT: "DUMMY-DUMMY"
+      ASCEND_SF_USER: "x"
+      ASCEND_SF_PASSWORD: "x"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - name: Compile / parse gate
+        run: dbt parse --target dev --profiles-dir . --no-partial-parse
+      - name: Governance policy gate
+        run: python ../ci/check_governance.py target/manifest.json
+
+  # ── Slim CI: build & test ONLY modified models (+children), deferring the rest to prod ──
+  slim-ci:
+    name: slim build (dev)
+    needs: lint
+    uses: ./.github/workflows/_dbt-build.yml
+    with:
+      target: dev
+      environment: dev
+      select: "state:modified+"
+      defer: true
+    secrets: inherit

@@ -3,6 +3,7 @@ version: 2
 # Time spine required by MetricFlow for time-based metrics.
 models:
   - name: metricflow_time_spine
+    description: "Daily time spine required by the dbt semantic layer (MetricFlow)."
     time_spine:
       standard_granularity_column: date_day
     columns:

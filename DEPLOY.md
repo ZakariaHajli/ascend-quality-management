@@ -48,13 +48,18 @@ environment **consumer** role, e.g. `QUALITY_MANAGEMENT_CONSUMER_PROD`. The mart
 
 ## 5. CI/CD (GitHub Actions)
 
-`.github/workflows/dbt-cicd.yml` is included and runs `dbt build` on Linux runners:
+An advanced, state-aware pipeline built from a **reusable** workflow (`_dbt-build.yml`):
 
-| Trigger | Job | Command |
+| Workflow | Trigger | What runs |
 |---|---|---|
-| Pull request → `main` | `dev` | `dbt build --target dev` |
-| Push / merge → `main` | `uat` | `dbt build --target uat` |
-| Published GitHub release | `prod` | `dbt build --target prod` |
+| `pr.yml` | PR → `main` | **lint & governance gate** (parse + policy-as-code, no Snowflake) → **Slim CI** (`--select state:modified+ --defer`) into `dev` |
+| `deploy.yml` | Push → `main` | build **uat**; publish defer state |
+| `deploy.yml` | Release | build **prod** (Environment-gated) |
+| `deploy.yml` | Nightly cron | source freshness + build **prod** |
+| `deploy.yml` | Manual dispatch | build any env on demand |
+
+Advanced: **Slim CI** (state compare + defer to prod), **policy-as-code** governance gate
+(`ci/check_governance.py`), pip + dbt-package **caching**, artifact upload, per-env concurrency.
 
 **One-time setup after pushing this repo to GitHub:**
 

@@ -166,6 +166,7 @@ models:
           arguments:
             combination_of_columns: [characteristic_code, version]
   - name: dim_defect_code
+    description: "Defect code dimension with code-group rollup (defect Pareto by group)."
     columns:
       - name: defect_code_sid
         data_tests: [unique, not_null]
@@ -175,6 +176,7 @@ models:
       - name: production_order_sid
         data_tests: [unique, not_null]
   - name: dim_calendar
+    description: "Referential shared calendar product (cross-domain interface)."
     columns:
       - name: date_day
         data_tests: [unique, not_null]

@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]          # merge to main  -> uat
+  release:
+    types: [published]        # GitHub release -> prod
+  schedule:
+    - cron: "0 3 * * *"       # nightly 03:00 UTC -> prod refresh (with source freshness)
+  workflow_dispatch:          # manual run, choose the environment
+    inputs:
+      target:
+        description: "Environment to build"
+        type: choice
+        options: [dev, uat, prod]
+        default: uat
+      full_refresh:
+        description: "Full refresh"
+        type: boolean
+        default: false
+
+jobs:
+  uat:
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/_dbt-build.yml
+    with:
+      target: uat
+      environment: uat
+      upload_state: true        # publish manifest as the Slim-CI defer baseline
+    secrets: inherit
+
+  prod:
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/_dbt-build.yml
+    with:
+      target: prod
+      environment: prod         # add required-reviewer protection on this Environment for approval
+      upload_state: true
+    secrets: inherit
+
+  nightly-prod:
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflows/_dbt-build.yml
+    with:
+      target: prod
+      environment: prod
+      freshness: true
+    secrets: inherit
+
+  manual:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_dbt-build.yml
+    with:
+      target: ${{ inputs.target }}
+      environment: ${{ inputs.target }}
+      full_refresh: ${{ inputs.full_refresh }}
+    secrets: inherit
