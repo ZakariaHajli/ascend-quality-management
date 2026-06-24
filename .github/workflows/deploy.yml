@@ -59,3 +59,76 @@ jobs:
       environment: ${{ inputs.target }}
       full_refresh: ${{ inputs.full_refresh }}
     secrets: inherit
+
+  # ── Publish the dbt docs site on every merge to main ──
+  # Always: a downloadable, self-contained docs artifact (works on private/free repos).
+  docs:
+    if: github.event_name == 'push'
+    needs: uat                       # document the freshly-built uat state
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      ASCEND_SF_ACCOUNT:  ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER:     ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - name: Generate dbt docs (self-contained single file)
+        run: dbt docs generate --static --target uat --profiles-dir .
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs-site
+          path: dbt/target/static_index.html
+          retention-days: 30
+
+  # Live GitHub Pages site — activates only when repo variable PUBLISH_PAGES == 'true'
+  # (requires a PUBLIC repo or a paid plan with Pages enabled, source = GitHub Actions).
+  docs-pages:
+    if: github.event_name == 'push' && vars.PUBLISH_PAGES == 'true'
+    needs: uat
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      ASCEND_SF_ACCOUNT:  ${{ secrets.ASCEND_SF_ACCOUNT }}
+      ASCEND_SF_USER:     ${{ secrets.ASCEND_SF_USER }}
+      ASCEND_SF_PASSWORD: ${{ secrets.ASCEND_SF_PASSWORD }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r ../requirements.txt
+      - run: dbt deps
+      - run: dbt docs generate --static --target uat --profiles-dir .
+      - name: Assemble Pages site
+        run: |
+          mkdir -p ../_site
+          cp target/static_index.html ../_site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
