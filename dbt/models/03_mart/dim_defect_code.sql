@@ -21,5 +21,12 @@ select
         when 'DIM' then 'Dimensionnel'
         when 'FUN' then 'Fonctionnel'
         else codegruppe
-    end                         as code_group_label
+    end                         as code_group_label,
+    -- Slim CI demo: triage priority by defect group (FUN > DIM > VIS).
+    case codegruppe
+        when 'FUN' then 1
+        when 'DIM' then 2
+        when 'VIS' then 3
+        else 9
+    end                         as code_group_priority
 from codes
