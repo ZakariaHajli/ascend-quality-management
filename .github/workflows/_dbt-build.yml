@@ -20,6 +20,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read        # list deploy runs + download the defer-state artifact (Slim CI)
     environment: ${{ inputs.environment }}
     concurrency:
       group: dbt-${{ inputs.target }}
