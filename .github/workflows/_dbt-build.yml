@@ -55,13 +55,17 @@ jobs:
       - name: Download prod state (for defer / Slim CI)
         if: ${{ inputs.defer }}
         continue-on-error: true
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: deploy.yml
-          name: dbt-prod-state
-          branch: main
-          path: dbt/prod-state
-          if_no_artifact_found: warn
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p prod-state
+          RID=$(gh run list --workflow deploy.yml --branch main --status success --limit 1 --json databaseId -q '.[0].databaseId')
+          echo "latest successful deploy run: ${RID:-none}"
+          if [ -n "$RID" ]; then
+            gh run download "$RID" --name dbt-prod-state --dir prod-state \
+              && echo "prod state downloaded" || echo "no dbt-prod-state artifact on run $RID"
+          fi
+          ls -la prod-state || true
 
       - name: Source freshness
         if: ${{ inputs.freshness }}
