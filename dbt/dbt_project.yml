@@ -57,9 +57,24 @@ models:
     03_mart:
       +materialized: table
       +schema: DPA
-      +tags: ["quality_management"]
+      +tags: ["quality_management", "data_product"]
       +group: quality_management
+      # Governance metadata (catalog-ready): every mart object is a classified, owned data product.
+      +meta:
+        domain: quality_management
+        data_product: true
+        owner: quality-mgmt@ascend.example
+        classification: internal
+        certification: certified
+        refresh_cadence: daily
+        contains_pii: false
       # Change Tracking (Power BI incremental refresh) + RBAC GRANT to the env consumer role.
       +post-hook:
         - "ALTER TABLE {{ this }} SET CHANGE_TRACKING = TRUE"
         - "{{ grant_select_to_consumer() }}"
+
+# Persist failing test rows to an audit schema for governance (auditable data-quality history).
+data_tests:
+  quality_management:
+    +store_failures_as: table
+    +schema: TEST_AUDIT

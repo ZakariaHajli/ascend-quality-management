@@ -4,6 +4,7 @@
         unique_key=['inspection_lot_number', 'characteristic_code'],
         incremental_strategy='merge',
         merge_exclude_columns=['creation_datetime'],
+        on_schema_change='sync_all_columns',
         access='protected'
     )
 }}
@@ -14,7 +15,8 @@
 with qamr as (
     select * from {{ ref('stg_qm__inspection_result') }}
     {% if is_incremental() %}
-    where sync_datetime >= (select coalesce(max(sync_datetime), '1900-01-01'::timestamp_ntz) from {{ this }})
+    -- 3-day lookback window for late-arriving results
+    where sync_datetime >= dateadd(day, -3, (select coalesce(max(sync_datetime), '1900-01-01'::timestamp_ntz) from {{ this }}))
     {% endif %}
 ),
 

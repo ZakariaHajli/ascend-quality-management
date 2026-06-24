@@ -4,6 +4,7 @@
         unique_key='inspection_lot_number',
         incremental_strategy='merge',
         merge_exclude_columns=['creation_datetime'],
+        on_schema_change='sync_all_columns',
         access='protected'
     )
 }}
@@ -18,7 +19,8 @@ with
 
 {% if is_incremental() %}
 watermark as (
-    select coalesce(max(sync_datetime), '1900-01-01'::timestamp_ntz) as max_sync from {{ this }}
+    -- 3-day lookback so late-arriving updates near the boundary are reprocessed (idempotent merge)
+    select dateadd(day, -3, coalesce(max(sync_datetime), '1900-01-01'::timestamp_ntz)) as max_sync from {{ this }}
 ),
 changed as (
     select prueflos from {{ ref('stg_qm__inspection_lot') }} where sync_datetime >= (select max_sync from watermark)

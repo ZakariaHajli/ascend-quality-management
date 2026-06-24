@@ -1,20 +1,31 @@
 {{
     config(
-        materialized='table',
-        access='public',
-        contract={'enforced': true}
+        materialized='incremental',
+        unique_key='inspection_lot_sid',
+        incremental_strategy='merge',
+        on_schema_change='sync_all_columns',
+        cluster_by=['created_date'],
+        access='public'
     )
 }}
 
 /*
-    ACCUMULATING SNAPSHOT fact (advanced Kimball) — one row per inspection lot, carrying its
-    lifecycle milestones (created -> usage decision) and the lag/age metrics that accumulate as
-    the lot progresses, plus a rollup of its defects. Inner join to dim_inspection_lot inherits
-    the perimeter.
+    ACCUMULATING SNAPSHOT, incrementally merged (advanced Kimball + robust incremental).
+    One row per lot; as a lot progresses (created -> usage decision) its milestone/lag columns
+    are UPDATED in place via merge on inspection_lot_sid. Sourced from the change-tracked
+    intermediate (inspection_lot.sync_datetime) with a 3-day lookback; the inner join to
+    dim_inspection_lot inherits the perimeter. cluster_by(created_date) prunes time-scoped scans.
 */
 
 with lots as (
-    select * from {{ ref('dim_inspection_lot') }}
+    select * from {{ ref('inspection_lot') }}
+    {% if is_incremental() %}
+    where sync_datetime >= dateadd(day, -3, (select coalesce(max(lot_sync_datetime), '1900-01-01'::timestamp_ntz) from {{ this }}))
+    {% endif %}
+),
+
+perimeter as (
+    select inspection_lot_sid, inspection_lot_number from {{ ref('dim_inspection_lot') }}
 ),
 
 defect_agg as (
@@ -31,19 +42,21 @@ dim_order as (
 )
 
 select
-    cast(lots.inspection_lot_sid as number)                                     as inspection_lot_sid,
-    cast(dim_order.production_order_sid as number)                              as production_order_sid,
-    cast(lots.inspection_lot_number as varchar)                                 as inspection_lot_number,
-    cast(lots.material_number as varchar)                                       as material_number,
-    cast(lots.lot_status as varchar)                                            as lot_status,
-    cast(lots.lot_creation_date as date)                                        as created_date,
-    cast(lots.usage_decision_date as date)                                      as decision_date,
-    cast(datediff(day, lots.lot_creation_date, lots.usage_decision_date) as number) as days_to_decision,
-    cast(datediff(day, lots.lot_creation_date, current_date) as number)         as lot_age_days,
-    cast(lots.is_accepted as boolean)                                           as is_accepted,
-    cast(lots.is_rejected as boolean)                                           as is_rejected,
-    cast(coalesce(defect_agg.total_defect_quantity, 0) as number)               as total_defect_quantity,
-    cast(coalesce(defect_agg.defect_line_count, 0) as number)                   as defect_line_count
+    perimeter.inspection_lot_sid,
+    dim_order.production_order_sid,
+    lots.inspection_lot_number,
+    lots.material_number,
+    lots.lot_status,
+    lots.lot_creation_date                                              as created_date,
+    lots.usage_decision_date                                           as decision_date,
+    datediff(day, lots.lot_creation_date, lots.usage_decision_date)     as days_to_decision,
+    datediff(day, lots.lot_creation_date, current_date)                as lot_age_days,
+    lots.is_accepted,
+    lots.is_rejected,
+    coalesce(defect_agg.total_defect_quantity, 0)                      as total_defect_quantity,
+    coalesce(defect_agg.defect_line_count, 0)                          as defect_line_count,
+    lots.sync_datetime                                                as lot_sync_datetime
 from lots
+join perimeter  on lots.inspection_lot_number = perimeter.inspection_lot_number
 left join defect_agg on lots.inspection_lot_number = defect_agg.inspection_lot_number
 left join dim_order  on lots.production_order_number = dim_order.production_order_number

@@ -1,0 +1,5 @@
+merknr,version,valid_from,valid_to,sollwert,toleranzun,toleranzob,unit
+C10,1,2024-01-01,2025-06-30,300,298,303,mm
+C10,2,2025-07-01,9999-12-31,300,298,302,mm
+C20,1,2024-01-01,9999-12-31,8,7,9,pts_cm
+C30,1,2024-01-01,9999-12-31,0,0,2,dE

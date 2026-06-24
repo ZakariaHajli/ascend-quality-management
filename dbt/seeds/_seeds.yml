@@ -32,9 +32,14 @@ seeds:
       column_types: {codegruppe: varchar, code: varchar, kurztext: varchar, glchangetime: varchar}
 
   - name: qm_characteristic
-    description: "Inspection characteristic master."
+    description: "Inspection characteristic master (current specs)."
     config:
       column_types: {merknr: varchar, kurztext: varchar, sollwert: float, toleranzun: float, toleranzob: float, unit: varchar, glchangetime: varchar}
+
+  - name: qm_characteristic_history
+    description: "Versioned characteristic spec history (effective-dated) for bi-temporal point-in-time joins."
+    config:
+      column_types: {merknr: varchar, version: number, valid_from: date, valid_to: date, sollwert: float, toleranzun: float, toleranzob: float, unit: varchar}
 
   - name: production_order_product
     description: >
@@ -42,4 +47,4 @@ seeds:
       (Data Mesh cross-domain consumption). Seeded here for a runnable prototype; in production
       this is read via a declared cross-domain source (see _staging__sources.example.yml).
     config:
-      column_types: {production_order_number: varchar, material_number: varchar, product_family: varchar, plant: varchar, creation_date: date, order_quantity: number}
+      column_types: {production_order_number: varchar, material_number: varchar, product_family: varchar, plant: varchar, creation_date: date, order_quantity: number, last_changed: timestamp_ntz}

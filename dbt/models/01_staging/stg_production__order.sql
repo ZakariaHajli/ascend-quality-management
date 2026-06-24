@@ -24,6 +24,6 @@ select
     plant,
     creation_date,
     order_quantity,
-    'production_management'                  as source_system,
-    cast(current_timestamp() as timestamp_ntz) as sync_datetime
+    'production_management'             as source_system,
+    cast(last_changed as timestamp_ntz) as sync_datetime  -- stable change signal (for the timestamp-strategy snapshot)
 from consumed

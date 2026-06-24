@@ -1,0 +1,21 @@
+version: 2
+
+# Data Mesh discoverability/lineage: declare the downstream data-product consumers so the
+# producing domain knows who depends on what (and lineage extends into the BI layer).
+exposures:
+  - name: quality_management_dashboard
+    label: "Quality Management Dashboard (Power BI)"
+    type: dashboard
+    maturity: high
+    url: https://app.powerbi.com/groups/quality/reports/qm-dashboard
+    description: >
+      Site quality dashboard: first-pass yield & defect PPM trends, defect Pareto, inspection-lot
+      lifecycle cycle-time, and bi-temporal in-spec analysis.
+    depends_on:
+      - ref('agg_quality_kpi')
+      - ref('fct_inspection_lot_lifecycle')
+      - ref('fct_inspection_result')
+      - ref('fct_quality_defect')
+    owner:
+      name: Quality Management Domain
+      email: quality-mgmt@ascend.example

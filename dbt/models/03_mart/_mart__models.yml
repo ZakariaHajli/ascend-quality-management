@@ -12,18 +12,30 @@ models:
       - name: inspection_lot_number
         data_type: varchar(16777216)
         data_tests: [unique, not_null]
+        config:
+          meta:
+            business_key: true
+            glossary: "SAP QALS inspection lot — the natural key of a quality inspection."
       - name: material_number
         data_type: varchar(16777216)
       - name: plant
         data_type: varchar(16777216)
       - name: production_order_number
         data_type: varchar(16777216)
+        config:
+          meta:
+            glossary: "Foreign key into the consumed production_management production-order product."
       - name: inspection_type
         data_type: varchar(16777216)
+        data_tests:
+          - accepted_values: {arguments: {values: ["04"]}}
       - name: lot_quantity
         data_type: number(38,0)
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0}}
       - name: lot_creation_date
         data_type: date
+        data_tests: [not_in_future]
       - name: usage_decision_code
         data_type: varchar(16777216)
       - name: usage_decision_date
@@ -38,7 +50,10 @@ models:
         data_type: boolean
 
   - name: fct_inspection_result
-    description: "Characteristic-result fact (lot x characteristic). Enforced contract."
+    description: >
+      Characteristic-result fact (lot x characteristic) with bi-temporal point-in-time
+      correctness: is_in_spec uses the spec valid AT inspection (ASOF), is_in_spec_current uses
+      today's spec, verdict_differs flags rows changed by a spec revision. Enforced contract.
     columns:
       - name: inspection_lot_sid
         data_type: number(38,0)
@@ -53,54 +68,39 @@ models:
         data_type: varchar(16777216)
       - name: characteristic_code
         data_type: varchar(16777216)
+      - name: inspection_date
+        data_type: date
+        data_tests: [not_in_future]
       - name: measured_value
         data_type: float
-      - name: target_value
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0}}
+      - name: effective_lower_spec_limit
         data_type: float
-      - name: lower_spec_limit
+      - name: effective_upper_spec_limit
         data_type: float
-      - name: upper_spec_limit
+      - name: current_lower_spec_limit
         data_type: float
-      - name: deviation_from_target
+      - name: current_upper_spec_limit
         data_type: float
       - name: is_in_spec
+        description: "{{ doc('bi_temporal_in_spec') }}"
         data_type: boolean
         data_tests: [not_null]
+      - name: is_in_spec_current
+        data_type: boolean
+      - name: verdict_differs
+        data_type: boolean
 
   - name: fct_inspection_lot_lifecycle
-    description: "Accumulating-snapshot fact: lot milestones + lag/age + defect rollup. Enforced contract."
+    description: "Accumulating-snapshot fact (incrementally merged): lot milestones, lag/age, defect rollup."
     columns:
       - name: inspection_lot_sid
-        data_type: number(38,0)
-        constraints: [{type: not_null}]
-        data_tests: [unique]
-      - name: production_order_sid
-        data_type: number(38,0)
-      - name: inspection_lot_number
-        data_type: varchar(16777216)
-      - name: material_number
-        data_type: varchar(16777216)
-      - name: lot_status
-        data_type: varchar(16777216)
-      - name: created_date
-        data_type: date
-      - name: decision_date
-        data_type: date
+        data_tests: [unique, not_null]
       - name: days_to_decision
-        data_type: number(38,0)
         data_tests:
           - dbt_expectations.expect_column_values_to_be_between:
               arguments: {min_value: 0}
-      - name: lot_age_days
-        data_type: number(38,0)
-      - name: is_accepted
-        data_type: boolean
-      - name: is_rejected
-        data_type: boolean
-      - name: total_defect_quantity
-        data_type: number(38,0)
-      - name: defect_line_count
-        data_type: number(38,0)
 
   - name: agg_quality_kpi
     description: "Canonical quality KPIs per material (semantic layer realised). Enforced contract."
@@ -117,18 +117,26 @@ models:
       - name: lots_rejected
         data_type: number(38,0)
       - name: first_pass_yield
+        description: "{{ doc('first_pass_yield') }}"
         data_type: float
         data_tests:
           - dbt_expectations.expect_column_values_to_be_between:
               arguments: {min_value: 0, max_value: 1}
       - name: reject_rate
         data_type: float
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 1}
       - name: inspected_quantity
         data_type: number(38,0)
       - name: defect_quantity
         data_type: number(38,0)
       - name: defect_ppm
+        description: "{{ doc('defect_ppm') }}"
         data_type: float
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
       - name: results_total
         data_type: number(38,0)
       - name: in_spec_results
@@ -141,9 +149,22 @@ models:
 
   # ── Other products (documented + tested) ───────────────────────────────────
   - name: dim_characteristic
+    description: "Current characteristic specs (Type-1)."
     columns:
       - name: characteristic_sid
         data_tests: [unique, not_null]
+
+  - name: dim_characteristic_history
+    description: "Type-2 (SCD2) characteristic spec history backing the bi-temporal ASOF join."
+    columns:
+      - name: characteristic_version_sid
+        data_tests: [unique, not_null]
+      - name: is_current
+        data_tests: [not_null]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [characteristic_code, version]
   - name: dim_defect_code
     columns:
       - name: defect_code_sid
@@ -163,6 +184,15 @@ models:
       - name: inspection_lot_sid
         data_tests:
           - relationships: {arguments: {to: ref('dim_inspection_lot'), field: inspection_lot_sid}}
+      - name: defect_quantity
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range: {arguments: {min_value: 0}}
+      - name: notification_date
+        data_tests: [not_in_future]
+      - name: code_group
+        data_tests:
+          - accepted_values: {arguments: {values: ["VIS", "DIM", "FUN"]}}
 
 unit_tests:
   - name: perimeter_excludes_out_of_scope_defects
@@ -185,3 +215,22 @@ unit_tests:
     expect:
       rows:
         - {inspection_lot_sid: 100, defect_code_sid: 200, production_order_sid: 300, notification_number: "N1", defect_item_number: 1, defect_code: "D1", code_group: "VIS", defect_description: "scratch", defect_quantity: 5, notification_date: "2026-01-01"}
+
+  - name: kpi_ratios_computed_correctly
+    description: "FPY, reject rate, defect PPM and in-spec rate must compute correctly per material."
+    model: agg_quality_kpi
+    given:
+      - input: ref('dim_inspection_lot')
+        rows:
+          - {material_number: "M1", inspection_lot_number: "L1", is_decision_made: true, is_accepted: true,  is_rejected: false, lot_quantity: 100}
+          - {material_number: "M1", inspection_lot_number: "L2", is_decision_made: true, is_accepted: false, is_rejected: true,  lot_quantity: 100}
+      - input: ref('inspection_result')
+        rows:
+          - {inspection_lot_number: "L1", is_in_spec: true}
+          - {inspection_lot_number: "L2", is_in_spec: false}
+      - input: ref('defect')
+        rows:
+          - {inspection_lot_number: "L2", defect_quantity: 10}
+    expect:
+      rows:
+        - {material_number: "M1", lots_total: 2, lots_decided: 2, lots_accepted: 1, lots_rejected: 1, first_pass_yield: 0.5, reject_rate: 0.5, inspected_quantity: 200, defect_quantity: 10, defect_ppm: 50000.0, results_total: 2, in_spec_results: 1, in_spec_rate: 0.5}

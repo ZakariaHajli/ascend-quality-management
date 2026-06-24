@@ -1,3 +1,4 @@
+{{ config(store_failures=true) }}
 -- Consistency: the usage-decision code, the boolean flags, and the derived lot_status must
 -- agree on every lot in the lifecycle fact. Passes when zero rows are returned.
 

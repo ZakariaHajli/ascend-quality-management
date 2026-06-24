@@ -9,7 +9,8 @@
     config(
         unique_key='characteristic_code',
         strategy='check',
-        check_cols=['target_value', 'lower_spec_limit', 'upper_spec_limit']
+        check_cols=['target_value', 'lower_spec_limit', 'upper_spec_limit'],
+        invalidate_hard_deletes=true
     )
 }}
 
