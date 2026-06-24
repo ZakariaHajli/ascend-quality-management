@@ -20,10 +20,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read         # list deploy runs + download the defer-state artifact (Slim CI)
-      pull-requests: write  # post the Slim CI summary comment on the PR
+    # Permissions are set by the CALLER (a reusable workflow may only restrict, not expand them):
+    #   pr.yml grants actions:read + pull-requests:write; deploy.yml grants actions:read.
     environment: ${{ inputs.environment }}
     concurrency:
       group: dbt-${{ inputs.target }}
