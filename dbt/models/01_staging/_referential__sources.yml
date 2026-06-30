@@ -1,0 +1,13 @@
+version: 2
+
+# CROSS-DOMAIN CONSUMPTION (Data Mesh): the referential_data domain publishes its products in
+# its own database; this domain consumes them through a declared source interface (governed by
+# the cross-domain grants), never by reproducing the producer's logic.
+sources:
+  - name: referential_data
+    description: "Products published by the referential_data domain (consumed cross-domain)."
+    database: "{{ (target.name ~ '_REFERENTIAL_DATA') | upper }}"   # DEV_REFERENTIAL_DATA on --target dev
+    schema: DPA
+    tables:
+      - name: dim_calendar
+        description: "The referential domain's shared conformed calendar product."

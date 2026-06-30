@@ -6,21 +6,18 @@
     )
 }}
 
--- Referential shared calendar product (cross-domain interface, access: public).
-
-with spine as (
-    {{ dbt_utils.date_spine(
-        datepart="day",
-        start_date="cast('2024-01-01' as date)",
-        end_date="cast('2027-01-01' as date)"
-    ) }}
-)
+/*
+    CROSS-DOMAIN CONSUMPTION (Data Mesh P1/P4).
+    This domain no longer re-implements a calendar — it CONSUMES the referential_data domain's
+    published `dim_calendar` product through a declared cross-domain source. The referential
+    domain owns the logic and the contract; this domain depends on the interface.
+*/
 
 select
-    cast(date_day as date)                  as date_day,
-    cast(year(date_day) as number)          as calendar_year,
-    cast(month(date_day) as number)         as calendar_month,
-    cast(yearofweekiso(date_day) as number) as iso_year,
-    cast(weekiso(date_day) as number)       as iso_week,
-    cast(to_char(date_day, 'YYYY-MM') as varchar) as year_month
-from spine
+    date_day,
+    calendar_year,
+    calendar_month,
+    iso_year,
+    iso_week,
+    year_month
+from {{ source('referential_data', 'dim_calendar') }}
