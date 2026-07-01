@@ -9,3 +9,8 @@ output "environments" {
     }
   }
 }
+
+output "powerbi_connections" {
+  description = "Per-environment Power BI → gold-layer (DPA) connection parameters."
+  value       = { for env, m in module.environment : env => m.powerbi_connection }
+}
