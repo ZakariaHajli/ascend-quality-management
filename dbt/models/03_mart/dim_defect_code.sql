@@ -29,5 +29,7 @@ select
         when 'VIS' then 3
         else 9
     end                         as code_group_priority,
-    iff(codegruppe = 'VIS', true, false) as is_visual_defect
+    iff(codegruppe = 'VIS', true, false) as is_visual_defect,
+    -- Criticality flag: functional defects are the highest-priority group (see priority above).
+    iff(codegruppe = 'FUN', true, false) as is_critical_defect
 from codes

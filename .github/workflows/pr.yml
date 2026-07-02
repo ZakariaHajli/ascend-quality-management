@@ -49,4 +49,5 @@ jobs:
       environment: dev
       select: "state:modified+"
       defer: true
+      data_diff: true          # diff modified mart products vs uat, comment on the PR
     secrets: inherit
