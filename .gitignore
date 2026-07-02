@@ -16,3 +16,6 @@ dbt_packages/
 logs/
 .user.yml
 package-lock.yml
+
+# Elementary report (edr) output
+edr_target/

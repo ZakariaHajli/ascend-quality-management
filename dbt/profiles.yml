@@ -36,3 +36,43 @@ quality_management:
       database: "PROD_QUALITY_MANAGEMENT"
       schema: "PUBLIC"
       threads: 4
+
+# The Elementary report CLI (edr) reads the ELEMENTARY schema through this profile to render
+# the data-health report. Same connection as above, scoped to each env's ELEMENTARY schema.
+# Usage: edr report --profiles-dir dbt --profile-target <dev|uat|prod>
+elementary:
+  target: dev
+  outputs:
+
+    dev:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_DEV"
+      warehouse: "WH_QUALITY_MANAGEMENT_DEV"
+      database: "DEV_QUALITY_MANAGEMENT"
+      schema: "ELEMENTARY"
+      threads: 4
+
+    uat:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_UAT"
+      warehouse: "WH_QUALITY_MANAGEMENT_UAT"
+      database: "UAT_QUALITY_MANAGEMENT"
+      schema: "ELEMENTARY"
+      threads: 4
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('ASCEND_SF_ACCOUNT') }}"
+      user: "{{ env_var('ASCEND_SF_USER') }}"
+      password: "{{ env_var('ASCEND_SF_PASSWORD') }}"
+      role: "QUALITY_MANAGEMENT_TRANSFORM_PROD"
+      warehouse: "WH_QUALITY_MANAGEMENT_PROD"
+      database: "PROD_QUALITY_MANAGEMENT"
+      schema: "ELEMENTARY"
+      threads: 4

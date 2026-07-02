@@ -11,3 +11,13 @@ sources:
     tables:
       - name: dim_calendar
         description: "The referential domain's shared conformed calendar product."
+        # Elementary observability on a CONSUMED product: detect when the upstream producer
+        # changes the interface (schema drift) or the product's size shifts unexpectedly.
+        # This is the Data Mesh contract-monitoring story — warn early, don't silently break.
+        data_tests:
+          - elementary.schema_changes:
+              config:
+                severity: warn
+          - elementary.volume_anomalies:
+              config:
+                severity: warn

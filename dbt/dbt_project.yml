@@ -22,6 +22,10 @@ query-comment:
   comment: "quality_management | {{ node.unique_id if node else 'macro' }}"
   append: true
 
+# Elementary observability: the elementary package injects its own on-run-start/on-run-end
+# hooks, which capture run/test/freshness results + schema snapshots into the ELEMENTARY
+# schema on every invocation. Powers anomaly-detection tests and the data-health report (edr).
+
 # generate_database_name builds <TARGET>_<domain_database_base>, so dev/uat/prod route
 # to DEV_<DOMAIN> / UAT_<DOMAIN> / PROD_<DOMAIN> automatically from --target.
 vars:
@@ -37,6 +41,10 @@ snapshots:
     +schema: SNAPSHOTS
 
 models:
+  # Elementary's observability models live in a dedicated ELEMENTARY schema.
+  elementary:
+    +schema: ELEMENTARY
+
   quality_management:
     +persist_docs:
       relation: true
