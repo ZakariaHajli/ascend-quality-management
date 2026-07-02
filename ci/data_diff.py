@@ -15,13 +15,18 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 MARKER = re.compile(r"ASCEND_DATA_DIFF_JSON_BEGIN(.*?)ASCEND_DATA_DIFF_JSON_END", re.S)
 
+# Write this script's dbt artifacts to a throwaway path so `dbt ls` / `run-operation`
+# don't overwrite the build's target/run_results.json (which the Slim CI comment reads).
+_TP = tempfile.mkdtemp(prefix="dbt-diff-")
+
 
 def dbt(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["dbt", *args], capture_output=True, text=True)
+    return subprocess.run(["dbt", *args, "--target-path", _TP], capture_output=True, text=True)
 
 
 def num(v):
