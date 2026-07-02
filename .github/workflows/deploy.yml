@@ -123,10 +123,22 @@ jobs:
       - run: pip install -r ../requirements.txt
       - run: dbt deps
       - run: dbt docs generate --static --target uat --profiles-dir .
-      - name: Assemble Pages site
+      - name: Prepare site + data catalog
         run: |
           mkdir -p ../_site
-          cp target/static_index.html ../_site/index.html
+          cp target/static_index.html ../_site/catalog.html
+          cp ../ci/pages_index.html   ../_site/index.html
+      # Data-health report (Elementary): render the ELEMENTARY schema — captured by the
+      # on-run-end hooks during the uat build — into a static HTML report. Non-fatal:
+      # observability must never block the docs publish.
+      - name: Install Elementary report CLI (edr)
+        run: pip install "elementary-data[snowflake]~=0.19.0"
+      - name: Generate data-health report
+        run: |
+          edr report \
+            --profiles-dir . --profile-target uat --project-dir . \
+            --file-path ../_site/observability.html \
+          || cp ../ci/observability_fallback.html ../_site/observability.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

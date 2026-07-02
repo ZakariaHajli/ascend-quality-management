@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ASCEND · Quality Management — Data Product</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2rem;
+      font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0;
+      padding: 2rem;
+    }
+    header { text-align: center; }
+    header .eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .72rem; color: #64748b; }
+    header h1 { margin: .35rem 0 .25rem; font-size: 1.9rem; }
+    header p { margin: 0; color: #94a3b8; font-size: .95rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; max-width: 760px; width: 100%; }
+    a.card {
+      display: block; text-decoration: none; color: inherit; padding: 1.5rem 1.4rem;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    a.card:hover { transform: translateY(-3px); border-color: #38bdf8; background: #223049; }
+    a.card .ico { font-size: 1.6rem; }
+    a.card h2 { margin: .6rem 0 .35rem; font-size: 1.15rem; }
+    a.card p { margin: 0; color: #94a3b8; font-size: .87rem; line-height: 1.45; }
+    footer { color: #475569; font-size: .78rem; text-align: center; }
+    footer code { color: #64748b; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">ASCEND Data Mesh · Manufacturing</div>
+    <h1>Quality Management — Data Product</h1>
+    <p>SAP QM medallion · dbt + Snowflake · governed, contracted, observable</p>
+  </header>
+  <div class="cards">
+    <a class="card" href="catalog.html">
+      <div class="ico">📚</div>
+      <h2>Data Catalog &amp; Lineage</h2>
+      <p>Models, columns, tests, contracts, exposures and end-to-end lineage — the dbt documentation site.</p>
+    </a>
+    <a class="card" href="observability.html">
+      <div class="ico">💓</div>
+      <h2>Data Health Report</h2>
+      <p>Elementary observability: run &amp; test results, freshness, volume &amp; schema-change anomaly detection.</p>
+    </a>
+  </div>
+  <footer>
+    Published on merge to <code>main</code> (uat) by GitHub Actions · Federated computational governance
+  </footer>
+</body>
+</html>

@@ -54,6 +54,12 @@ models:
       Characteristic-result fact (lot x characteristic) with bi-temporal point-in-time
       correctness: is_in_spec uses the spec valid AT inspection (ASOF), is_in_spec_current uses
       today's spec, verdict_differs flags rows changed by a spec revision. Enforced contract.
+    # Elementary observability: track row-count volume per build (warn-only — anomalies
+    # signal, they do not block the pipeline). Builds a trend baseline over successive runs.
+    data_tests:
+      - elementary.volume_anomalies:
+          config:
+            severity: warn
     columns:
       - name: inspection_lot_sid
         data_type: number(38,0)
