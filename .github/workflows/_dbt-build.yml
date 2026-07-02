@@ -12,6 +12,7 @@ on:
       full_refresh:  { required: false, type: boolean, default: false }
       freshness:     { required: false, type: boolean, default: false }   # run source freshness first
       upload_state:  { required: false, type: boolean, default: false }   # publish manifest as defer state
+      data_diff:     { required: false, type: boolean, default: false }   # diff modified products vs uat, comment on PR
     secrets:
       ASCEND_SF_ACCOUNT:  { required: true }
       ASCEND_SF_USER:     { required: true }
@@ -104,10 +105,18 @@ jobs:
           path: dbt/target/manifest.json
           retention-days: 30
 
+      # Data diff: compare each modified mart product's PR build against its uat baseline
+      # (full-row HASH). Non-fatal; produces data-diff.md folded into the PR comment below.
+      - name: Data diff of modified products
+        if: ${{ inputs.data_diff && github.event_name == 'pull_request' && success() }}
+        continue-on-error: true
+        run: python ../ci/data_diff.py "${{ inputs.target }}" > data-diff.md
+
       - name: Comment Slim CI summary on PR
         if: ${{ always() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python ../ci/pr_comment.py target/run_results.json "${{ inputs.target }}" > pr-comment.md
+          if [ -s data-diff.md ]; then cat data-diff.md >> pr-comment.md; fi
           gh pr comment "${{ github.event.pull_request.number }}" --body-file pr-comment.md --edit-last --create-if-none
