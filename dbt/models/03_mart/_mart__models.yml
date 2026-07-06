@@ -3,7 +3,19 @@ version: 2
 models:
   # ── Contracted products ────────────────────────────────────────────────────
   - name: dim_inspection_lot
-    description: "Inspection lot dimension; owns the domain perimeter (Pattern 4). Enforced contract."
+    description: >
+      Inspection lot dimension; owns the domain perimeter (Pattern 4). Enforced contract.
+      VERSIONED interface: v2 (latest) adds material_sid + lot_profile_sid; v1 is the frozen
+      original shape, kept as a deprecated compatibility surface until consumers migrate.
+      Unpinned ref() resolves to v2; pin with ref('dim_inspection_lot', v=1).
+    latest_version: 2
+    versions:
+      - v: 2
+      - v: 1
+        deprecation_date: "2026-12-31"
+        columns:
+          - include: all
+            exclude: [material_sid, lot_profile_sid]
     columns:
       - name: inspection_lot_sid
         data_type: number(38,0)
@@ -18,12 +30,16 @@ models:
             glossary: "SAP QALS inspection lot — the natural key of a quality inspection."
       - name: material_number
         data_type: varchar(16777216)
+        config:
+          meta:
+            polyseme: material_number
       - name: plant
         data_type: varchar(16777216)
       - name: production_order_number
         data_type: varchar(16777216)
         config:
           meta:
+            polyseme: production_order_number
             glossary: "Foreign key into the consumed production_management production-order product."
       - name: inspection_type
         data_type: varchar(16777216)
@@ -48,6 +64,80 @@ models:
         data_type: boolean
       - name: is_decision_made
         data_type: boolean
+      - name: material_sid
+        description: "v2: FK to dim_material (deterministic — computed, not joined)."
+        data_type: number(38,0)
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_material'), field: material_sid}}
+      - name: lot_profile_sid
+        description: "v2: FK to the dim_lot_profile junk dimension (deterministic)."
+        data_type: number(38,0)
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_lot_profile'), field: lot_profile_sid}}
+
+  - name: dim_material
+    description: >
+      Conformed material dimension (Kimball): the mesh's central polyseme. product_family is
+      enriched from the CONSUMED production_management product, so family rollups agree with
+      the producing domain by construction. Enforced contract.
+    columns:
+      - name: material_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - name: material_number
+        data_type: varchar(16777216)
+        data_tests: [unique, not_null]
+        config:
+          meta:
+            business_key: true
+            polyseme: material_number
+      - name: product_family
+        data_type: varchar(16777216)
+        data_tests: [not_null]
+      - name: plant_count
+        data_type: number(38,0)
+      - name: first_lot_date
+        data_type: date
+      - name: latest_lot_date
+        data_type: date
+
+  - name: dim_lot_profile
+    description: >
+      Junk dimension (Kimball): distinct observed combinations of the low-cardinality lot
+      flags/statuses, deterministically keyed so any model computes the FK locally.
+    columns:
+      - name: lot_profile_sid
+        data_tests: [unique, not_null]
+      - name: lot_status
+        data_tests:
+          - accepted_values: {arguments: {values: ["IN_INSPECTION", "ACCEPTED", "REJECTED", "UNKNOWN"]}}
+
+  - name: bridge_lot_defect_code
+    description: >
+      Bridge table (Kimball multi-valued dimension): lot x defect code with allocation_factor
+      (share of the lot's defect quantity, sums to 1.0 per lot) — weighted defect analysis
+      without fan-out double counting. Enforced contract.
+    columns:
+      - name: inspection_lot_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_inspection_lot'), field: inspection_lot_sid}}
+      - name: defect_code_sid
+        data_type: number(38,0)
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_defect_code'), field: defect_code_sid}}
+      - name: defect_quantity
+        data_type: number(38,0)
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0}}
+      - name: allocation_factor
+        data_type: float
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 1}
 
   - name: fct_inspection_result
     description: >
