@@ -1,0 +1,22 @@
+version: 2
+
+# CROSS-DOMAIN CONSUMPTION (Data Mesh): the production_management domain publishes its
+# order product in its own database; this domain consumes it through a declared source
+# interface (governed by the producer's cross-domain grants), never by reproducing the logic.
+sources:
+  - name: production_management
+    description: "Products published by the production_management domain (consumed cross-domain)."
+    database: "{{ (target.name ~ '_PRODUCTION_MANAGEMENT') | upper }}"   # DEV_PRODUCTION_MANAGEMENT on --target dev
+    schema: DPA
+    tables:
+      - name: dim_production_order
+        description: "The production domain's contracted order product (cross-domain interface)."
+        # Elementary observability on a CONSUMED product: schema drift on the upstream
+        # interface and unexpected volume shifts surface as warnings, not silent breaks.
+        data_tests:
+          - elementary.schema_changes:
+              config:
+                severity: warn
+          - elementary.volume_anomalies:
+              config:
+                severity: warn
