@@ -10,6 +10,11 @@
     PATTERN 4 — Perimeter-via-dimension. The domain scope (final inspections '04', rolling
     3-year window) lives here once; every fact inherits it through an inner join on
     inspection_lot_sid, so no fact restates the filter.
+
+    VERSION 2 (interface evolution): adds material_sid (FK → dim_material) and lot_profile_sid
+    (FK → dim_lot_profile junk dimension). Both FKs are DETERMINISTIC — pure functions of the
+    natural attributes — so they are computed locally, no join required. v1 remains available
+    as a deprecated compatibility interface until consumers migrate.
 */
 
 with lots as (
@@ -37,5 +42,10 @@ select
     cast(lot_status as varchar)             as lot_status,
     cast(is_accepted as boolean)            as is_accepted,
     cast(is_rejected as boolean)            as is_rejected,
-    cast(is_decision_made as boolean)       as is_decision_made
+    cast(is_decision_made as boolean)       as is_decision_made,
+    cast({{ generate_integer_surrogate_key(['material_number']) }} as number(38,0)) as material_sid,
+    cast({{ generate_integer_surrogate_key([
+        'inspection_type', 'lot_status', 'usage_decision_code',
+        'is_decision_made', 'is_accepted', 'is_rejected'
+    ]) }} as number(38,0))                  as lot_profile_sid
 from filtered

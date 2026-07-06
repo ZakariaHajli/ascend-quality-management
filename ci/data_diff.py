@@ -48,8 +48,8 @@ def main() -> int:
     if ls.returncode != 0:
         sys.stderr.write("data_diff: dbt ls failed (no state baseline yet?)\n" + ls.stdout + ls.stderr)
         return 0
-    models = [ln.strip() for ln in ANSI.sub("", ls.stdout).splitlines()
-              if ln.strip() and "." not in ln and " " not in ln]
+    models = sorted({ln.strip() for ln in ANSI.sub("", ls.stdout).splitlines()
+                     if ln.strip() and "." not in ln and " " not in ln})
     if not models:
         return 0  # nothing changed in the product layer → no section
 
