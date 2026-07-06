@@ -5,7 +5,7 @@
     )
 }}
 
--- Defect code dimension with a code-group rollup (for defect Pareto by group).
+-- Defect code dimension with a code-group rollup (for defect Pareto by group)..
 
 with codes as (
     select * from {{ ref('stg_qm__defect_code') }}
@@ -22,7 +22,6 @@ select
         when 'FUN' then 'Fonctionnel'
         else codegruppe
     end                         as code_group_label,
-    -- Slim CI demo: triage priority by defect group (FUN > DIM > VIS).
     case codegruppe
         when 'FUN' then 1
         when 'DIM' then 2
